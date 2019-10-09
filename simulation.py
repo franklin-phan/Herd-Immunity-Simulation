@@ -49,7 +49,7 @@ class Simulation(object):
         self.newly_infected = []
         self.population = self._create_population(self.initial_infected) # List of Person objects
         self.logger = Logger(self.file_name)
-
+        self.logger.write_metadata(self.pop_size, self.vacc_percentage, self.virus.name, self.virus.mortality_rate, self.virus.repro_rate)
     def _create_population(self, initial_infected):
         '''This method will create the initial population.
             Args:
@@ -136,8 +136,10 @@ class Simulation(object):
             3. Otherwise call simulation.interaction(person, random_person) and
                 increment interaction counter by 1.
             '''
+        print("Got to time_step")
         for person in self.population:
             interaction_counter = 0
+            print(interaction_counter)
             while interaction_counter < 100:
                 random_person = random.choice(self.population)
                 while random_person.is_alive == False:
@@ -146,6 +148,12 @@ class Simulation(object):
                 self.interaction(person,random_person)
                 interaction_counter += 1
     
+        for person in self.population:
+            if person.infection != None:
+                did_survive = person.did_survive_infection()
+                self.logger.log_infection_survival(person,did_survive)
+            
+        self._infect_newly_infected()
         # TODO: Finish this method.
         pass
 
@@ -162,12 +170,20 @@ class Simulation(object):
         # in as params
         assert person.is_alive == True
         assert random_person.is_alive == True
+        print("Got to interaction")
         if random_person.is_vaccinated == True:
+            self.logger.log_interaction(person, random_person,False,True,False)
             pass
-        if random_person.is_vaccinated == False and random_person.infection != None:
+        if random_person.infection != None:
+            self.logger.log_interaction(person, random_person,True,False,False)
+        elif random_person.is_vaccinated == False:
             ran_num = random.random()
             if self.virus.repro_rate > ran_num:
                 self.newly_infected.append(random_person._id)
+                self.logger.log_interaction(person, random_person,False,False,True)
+            else:
+                self.logger.log_interaction(person, random_person,False,False,False)
+        
 
         # TODO: Finish this method.
         #  The possible cases you'll need to cover are listed below:
@@ -210,6 +226,6 @@ if __name__ == "__main__":
         initial_infected = 1
 
     virus = Virus(virus_name, repro_rate, mortality_rate)
-    sim = Simulation(pop_size, vacc_percentage, initial_infected, virus)
+    sim = Simulation(pop_size, vacc_percentage, virus, initial_infected)
 
     sim.run()
